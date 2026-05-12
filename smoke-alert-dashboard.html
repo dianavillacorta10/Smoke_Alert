@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmokeSentinel — IoT Smoke Alert System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --card: #161a22;
+    --border: rgba(255,255,255,0.07);
+    --border-glow: rgba(255,255,255,0.15);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --safe: #22c55e;
+    --safe-bg: rgba(34,197,94,0.1);
+    --safe-border: rgba(34,197,94,0.25);
+    --danger: #ef4444;
+    --danger-bg: rgba(239,68,68,0.1);
+    --danger-border: rgba(239,68,68,0.3);
+    --warn: #f97316;
+    --warn-bg: rgba(249,115,22,0.1);
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --pulse-duration: 2s;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Grid bg pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, #ff4444, #ff7a00);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .brand-text h1 {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .brand-text p {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--safe-border);
+    background: var(--safe-bg);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--safe);
+    font-family: var(--mono);
+  }
+
+  .pulse-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--safe);
+    animation: pulse-green var(--pulse-duration) ease-in-out infinite;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+    50% { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+  }
+
+  .alert-count-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-glow);
+    background: var(--card);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .alert-count-badge span {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  /* ─── METRICS BAR ─── */
+  .metrics-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    transition: border-color 0.2s;
+  }
+
+  .metric-card:hover { border-color: var(--border-glow); }
+
+  .metric-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+
+  .metric-value {
+    font-size: 26px;
+    font-weight: 600;
+    font-family: var(--mono);
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .metric-value.danger { color: var(--danger); }
+  .metric-value.safe-color { color: var(--safe); }
+
+  /* ─── SECTION TITLE ─── */
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-bottom: 14px;
+  }
+
+  /* ─── ROOM GRID ─── */
+  .rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .room-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .room-card:hover { border-color: var(--border-glow); transform: translateY(-1px); }
+
+  .room-card.danger-state {
+    border-color: var(--danger-border);
+    background: rgba(239,68,68,0.05);
+    animation: danger-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes danger-pulse {
+    0%, 100% { border-color: rgba(239,68,68,0.3); box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    50% { border-color: rgba(239,68,68,0.7); box-shadow: 0 0 20px rgba(239,68,68,0.15); }
+  }
+
+  .room-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .room-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .room-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: 0.1em;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .badge-safe {
+    color: var(--safe);
+    background: var(--safe-bg);
+    border: 1px solid var(--safe-border);
+  }
+
+  .badge-danger {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border: 1px solid var(--danger-border);
+    animation: blink 0.8s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
+  }
+
+  .ppm-display {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .ppm-number {
+    font-family: var(--mono);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+    transition: color 0.3s;
+  }
+
+  .ppm-number.danger-ppm { color: var(--danger); }
+
+  .ppm-unit {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .ppm-bar-track {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .ppm-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--safe);
+    transition: width 0.6s ease, background 0.3s;
+  }
+
+  .ppm-bar-fill.danger-fill {
+    background: var(--danger);
+  }
+
+  .room-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .room-sensor-id { font-size: 10px; }
+
+  /* ─── CONTROLS ─── */
+  .controls-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 28px;
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .ctrl-label {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-right: 4px;
+  }
+
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border-glow);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: var(--mono);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  select:hover { border-color: rgba(255,255,255,0.3); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-trigger {
+    background: var(--warn);
+    color: #fff;
+  }
+
+  .btn-trigger:hover { background: #ea6800; }
+
+  .btn-reset {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border-glow);
+  }
+
+  .btn-reset:hover { color: var(--text); border-color: rgba(255,255,255,0.3); }
+
+  /* ─── ALERT OVERLAY ─── */
+  .alert-overlay {
+    display: none;
+    background: rgba(239,68,68,0.06);
+    border: 1px solid var(--danger-border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 28px;
+    animation: slideIn 0.4s ease;
+  }
+
+  .alert-overlay.visible { display: block; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .alert-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .alert-icon {
+    width: 44px; height: 44px;
+    background: var(--danger);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    animation: shake 0.5s ease-in-out;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-5deg); }
+    40% { transform: rotate(5deg); }
+    60% { transform: rotate(-5deg); }
+    80% { transform: rotate(3deg); }
+  }
+
+  .alert-title {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--danger);
+    letter-spacing: 0.05em;
+  }
+
+  .alert-subtitle {
+    font-size: 13px;
+    color: rgba(239,68,68,0.7);
+    margin-top: 3px;
+  }
+
+  .alert-instructions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .instruction-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 10px;
+  }
+
+  .instruction-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--danger);
+    background: rgba(239,68,68,0.15);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .instruction-text {
+    font-size: 13px;
+    color: rgba(239,68,68,0.9);
+    line-height: 1.4;
+  }
+
+  .alert-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn-mobile {
+    background: var(--danger);
+    color: #fff;
+  }
+
+  .btn-mobile:hover { background: #dc2626; }
+
+  .btn-dismiss {
+    background: transparent;
+    color: rgba(239,68,68,0.7);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+
+  .btn-dismiss:hover { color: var(--danger); border-color: var(--danger-border); }
+
+  /* ─── MOBILE MODAL ─── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-backdrop.visible { display: flex; }
+
+  .phone-frame {
+    width: 320px;
+    background: #1a1a1a;
+    border-radius: 40px;
+    border: 8px solid #2a2a2a;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    position: relative;
+  }
+
+  .phone-notch {
+    background: #111;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .phone-notch-pill {
+    width: 100px; height: 12px;
+    background: #000;
+    border-radius: 10px;
+  }
+
+  .phone-screen {
+    background: var(--danger);
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 24px;
+    text-align: center;
+  }
+
+  .phone-alert-icon {
+    font-size: 52px;
+    margin-bottom: 16px;
+    animation: bounce 1s ease-in-out infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .phone-title {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .phone-room {
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+
+  .phone-msg {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.5;
+    margin-bottom: 28px;
+  }
+
+  .btn-fire {
+    width: 100%;
+    background: #fff;
+    color: var(--danger);
+    font-size: 14px;
+    padding: 14px;
+    border-radius: 12px;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .btn-fire:hover { background: #ffe5e5; }
+
+  .btn-phone-dismiss {
+    width: 100%;
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    padding: 12px;
+    border-radius: 12px;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .btn-phone-dismiss:hover { background: rgba(255,255,255,0.25); }
+
+  .phone-home-bar {
+    background: #1a1a1a;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .phone-home-pill {
+    width: 80px; height: 4px;
+    background: #555;
+    border-radius: 4px;
+  }
+
+  /* ─── LOG ─── */
+  .log-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+
+  .log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .log-list::-webkit-scrollbar { width: 4px; }
+  .log-list::-webkit-scrollbar-track { background: transparent; }
+  .log-list::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--surface);
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .log-dot.safe { background: var(--safe); }
+  .log-dot.danger { background: var(--danger); }
+  .log-dot.info { background: #60a5fa; }
+  .log-msg { color: var(--text); }
+
+  .empty-log {
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 20px;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    text-align: center;
+    margin-top: 36px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+
+  /* Threshold line */
+  .threshold-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-left: auto;
+  }
+
+  .threshold-dot-safe { width: 8px; height: 8px; border-radius: 50%; background: var(--safe); }
+  .threshold-dot-danger { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+
+  /* Siren animation overlay on room card */
+  .siren-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(239,68,68,0.08), transparent);
+    animation: siren-flash 1.2s ease-in-out infinite;
+    border-radius: 14px;
+    display: none;
+  }
+
+  .room-card.danger-state .siren-overlay { display: block; }
+
+  @keyframes siren-flash {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🔥</div>
+      <div class="brand-text">
+        <h1>SMOKESENTINEL</h1>
+        <p>IoT Real-Time Alert System</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill" id="systemStatus">
+        <div class="pulse-dot" id="pulseIndicator"></div>
+        <span>System Live</span>
+      </div>
+      <div class="alert-count-badge">
+        <span>⚠</span>
+        Active Alerts: <span id="activeAlerts">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- METRICS BAR -->
+  <div class="metrics-bar">
+    <div class="metric-card">
+      <div class="metric-label">Monitored Rooms</div>
+      <div class="metric-value">6</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Smoke Level</div>
+      <div class="metric-value" id="avgPpm">120 <span style="font-size:14px;color:#6b7280;">PPM</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Safe Threshold</div>
+      <div class="metric-value safe-color">200 <span style="font-size:14px;color:#6b7280;">PPM</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Last Alert</div>
+      <div class="metric-value" id="lastAlertTime" style="font-size:16px;padding-top:6px;">—</div>
+    </div>
+  </div>
+
+  <!-- ALERT OVERLAY -->
+  <div class="alert-overlay" id="alertOverlay">
+    <div class="alert-header">
+      <div class="alert-icon">🚨</div>
+      <div>
+        <div class="alert-title">⚠ SMOKE DETECTED</div>
+        <div class="alert-subtitle" id="alertSubtitle">Emergency protocols activated — Immediate action required</div>
+      </div>
+    </div>
+    <div class="alert-instructions">
+      <div class="instruction-item">
+        <div class="instruction-num">1</div>
+        <div class="instruction-text">Evacuate the building <strong>immediately</strong></div>
+      </div>
+      <div class="instruction-item">
+        <div class="instruction-num">2</div>
+        <div class="instruction-text">Use <strong>stairs only</strong> — do not use elevators</div>
+      </div>
+      <div class="instruction-item">
+        <div class="instruction-num">3</div>
+        <div class="instruction-text">Alert authorities and staff right away</div>
+      </div>
+    </div>
+    <div class="alert-actions">
+      <button class="btn btn-mobile" onclick="showMobileAlert()">📱 View Mobile Alert</button>
+      <button class="btn btn-dismiss" onclick="dismissAlert()">✓ Dismiss Alert</button>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls-section">
+    <div class="section-title" style="margin-bottom:14px;">— Simulation Controls</div>
+    <div class="controls-row">
+      <span class="ctrl-label">Target Room:</span>
+      <select id="roomSelector">
+        <option value="0">Room 101</option>
+        <option value="1">Room 102</option>
+        <option value="2">Room 103</option>
+        <option value="3">Room 104</option>
+        <option value="4">Room 105</option>
+        <option value="5">Room 106</option>
+        <option value="random">Random Room</option>
+      </select>
+      <button class="btn btn-trigger" onclick="triggerSmoke()">🔥 Trigger Smoke</button>
+      <button class="btn btn-reset" onclick="resetAll()">↺ Reset All</button>
+      <div class="threshold-info">
+        <div class="threshold-dot-safe"></div> Safe &lt;200
+        <div class="threshold-dot-danger" style="margin-left:8px;"></div> Alert ≥200
+      </div>
+    </div>
+  </div>
+
+  <!-- ROOM GRID -->
+  <div class="section-title">— Live Room Monitoring</div>
+  <div class="rooms-grid" id="roomsGrid"></div>
+
+  <!-- EVENT LOG -->
+  <div class="log-section">
+    <div class="log-header">
+      <div class="section-title" style="margin-bottom:0;">— Event Log</div>
+      <button class="btn btn-reset" onclick="clearLog()" style="padding:5px 12px;font-size:11px;">Clear</button>
+    </div>
+    <div class="log-list" id="logList">
+      <div class="empty-log">No events recorded yet.</div>
+    </div>
+  </div>
+
+  <div class="footer">SmokeSentinel v1.0 &nbsp;|&nbsp; IoT Smoke Alert System &nbsp;|&nbsp; 6 Sensors Active</div>
+</div>
+
+<!-- MOBILE MODAL -->
+<div class="modal-backdrop" id="mobileModal" onclick="closeMobileModal(event)">
+  <div class="phone-frame">
+    <div class="phone-notch"><div class="phone-notch-pill"></div></div>
+    <div class="phone-screen">
+      <div class="phone-alert-icon">🔥</div>
+      <div class="phone-title">SMOKE ALERT</div>
+      <div class="phone-room" id="mobileRoomText">Room 101</div>
+      <div class="phone-msg" id="mobileMsgText">Smoke detected. Evacuate the building immediately and use stairs only.</div>
+      <button class="btn btn-fire" onclick="callFire()">📞 CALL FIRE DEPT</button>
+      <button class="btn btn-phone-dismiss" onclick="closeMobileModal()">✓ Acknowledge & Dismiss</button>
+    </div>
+    <div class="phone-home-bar"><div class="phone-home-pill"></div></div>
+  </div>
+</div>
+
+<script>
+  const THRESHOLD = 200;
+  const SAFE_MIN = 110, SAFE_MAX = 135;
+
+  const roomData = [
+    { id: 'R101', name: 'Room 101', ppm: 118, danger: false },
+    { id: 'R102', name: 'Room 102', ppm: 122, danger: false },
+    { id: 'R103', name: 'Room 103', ppm: 115, danger: false },
+    { id: 'R104', name: 'Room 104', ppm: 125, danger: false },
+    { id: 'R105', name: 'Room 105', ppm: 119, danger: false },
+    { id: 'R106', name: 'Room 106', ppm: 121, danger: false },
+  ];
+
+  let activeRoom = null;
+  let fluctInterval = null;
+  let logEntries = [];
+
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function buildGrid() {
+    const grid = document.getElementById('roomsGrid');
+    grid.innerHTML = roomData.map((r, i) => `
+      <div class="room-card ${r.danger ? 'danger-state' : ''}" id="card-${i}">
+        <div class="siren-overlay"></div>
+        <div class="room-header">
+          <div class="room-name">${r.name}</div>
+          <div class="room-status-badge ${r.danger ? 'badge-danger' : 'badge-safe'}" id="badge-${i}">
+            ${r.danger ? '● ALERT' : '● SAFE'}
+          </div>
+        </div>
+        <div class="ppm-display">
+          <div class="ppm-number ${r.danger ? 'danger-ppm' : ''}" id="ppm-${i}">${r.ppm}</div>
+          <div class="ppm-unit">PPM</div>
+        </div>
+        <div class="ppm-bar-track">
+          <div class="ppm-bar-fill ${r.danger ? 'danger-fill' : ''}" id="bar-${i}" style="width:${ppmToWidth(r.ppm)}%"></div>
+        </div>
+        <div class="room-meta">
+          <div>Sensor ID: SN-${r.id}</div>
+          <div class="room-sensor-id" id="meta-${i}">Status: ${r.danger ? 'CRITICAL' : 'Normal'}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function ppmToWidth(ppm) {
+    return Math.min(100, Math.max(5, (ppm / 300) * 100));
+  }
+
+  function updateCard(i) {
+    const r = roomData[i];
+    const card = document.getElementById(`card-${i}`);
+    const badge = document.getElementById(`badge-${i}`);
+    const ppmEl = document.getElementById(`ppm-${i}`);
+    const bar = document.getElementById(`bar-${i}`);
+    const meta = document.getElementById(`meta-${i}`);
+
+    if (r.danger) {
+      card.classList.add('danger-state');
+      badge.className = 'room-status-badge badge-danger';
+      badge.textContent = '● ALERT';
+      ppmEl.classList.add('danger-ppm');
+      bar.classList.add('danger-fill');
+      meta.textContent = 'Status: CRITICAL';
+    } else {
+      card.classList.remove('danger-state');
+      badge.className = 'room-status-badge badge-safe';
+      badge.textContent = '● SAFE';
+      ppmEl.classList.remove('danger-ppm');
+      bar.classList.remove('danger-fill');
+      meta.textContent = 'Status: Normal';
+    }
+
+    ppmEl.textContent = r.ppm;
+    bar.style.width = ppmToWidth(r.ppm) + '%';
+  }
+
+  function updateStats() {
+    const alerts = roomData.filter(r => r.danger).length;
+    document.getElementById('activeAlerts').textContent = alerts;
+
+    const avg = Math.round(roomData.reduce((a, r) => a + r.ppm, 0) / roomData.length);
+    document.getElementById('avgPpm').innerHTML = `${avg} <span style="font-size:14px;color:#6b7280;">PPM</span>`;
+  }
+
+  function triggerSmoke() {
+    let sel = document.getElementById('roomSelector').value;
+    let idx = sel === 'random' ? rand(0, 5) : parseInt(sel);
+
+    if (roomData[idx].danger) {
+      addLog('info', `${roomData[idx].name} already in alert state.`);
+      return;
+    }
+
+    roomData[idx].danger = true;
+    roomData[idx].ppm = rand(245, 320);
+    activeRoom = idx;
+
+    updateCard(idx);
+    updateStats();
+    showAlert(roomData[idx].name);
+    addLog('danger', `SMOKE DETECTED in ${roomData[idx].name} — PPM: ${roomData[idx].ppm}`);
+
+    // fluctuate danger PPM
+    if (fluctInterval) clearInterval(fluctInterval);
+    fluctInterval = setInterval(() => {
+      roomData.forEach((r, i) => {
+        if (r.danger) {
+          r.ppm = rand(240, 350);
+        } else {
+          r.ppm = rand(SAFE_MIN, SAFE_MAX);
+        }
+        updateCard(i);
+      });
+      updateStats();
+    }, 1800);
+  }
+
+  function showAlert(roomName) {
+    const overlay = document.getElementById('alertOverlay');
+    overlay.classList.add('visible');
+    document.getElementById('alertSubtitle').textContent =
+      `Smoke detected in ${roomName} — Emergency protocols activated`;
+    document.getElementById('mobileRoomText').textContent = roomName;
+    document.getElementById('mobileMsgText').textContent =
+      `Smoke detected in ${roomName}. Evacuate immediately and use stairs only. Do not use elevators.`;
+    document.getElementById('lastAlertTime').textContent = new Date().toLocaleTimeString();
+  }
+
+  function dismissAlert() {
+    document.getElementById('alertOverlay').classList.remove('visible');
+    addLog('info', 'Alert acknowledged and dismissed by operator.');
+  }
+
+  function resetAll() {
+    if (fluctInterval) clearInterval(fluctInterval);
+    fluctInterval = null;
+
+    roomData.forEach((r, i) => {
+      r.danger = false;
+      r.ppm = rand(SAFE_MIN, SAFE_MAX);
+      updateCard(i);
+    });
+
+    activeRoom = null;
+    document.getElementById('alertOverlay').classList.remove('visible');
+    document.getElementById('activeAlerts').textContent = '0';
+    updateStats();
+    addLog('info', 'System reset — All rooms cleared to SAFE.');
+  }
+
+  function showMobileAlert() {
+    document.getElementById('mobileModal').classList.add('visible');
+    addLog('info', 'Mobile alert viewed by operator.');
+  }
+
+  function closeMobileModal(e) {
+    if (!e || e.target === document.getElementById('mobileModal')) {
+      document.getElementById('mobileModal').classList.remove('visible');
+    }
+  }
+
+  function callFire() {
+    addLog('danger', '📞 FIRE DEPARTMENT CALLED — Emergency services alerted!');
+    closeMobileModal();
+    alert('🚒 Calling Fire Department...\n\nThis is a simulation. In a real emergency, dial your local fire department immediately.');
+  }
+
+  function addLog(type, msg) {
+    const time = new Date().toLocaleTimeString();
+    logEntries.unshift({ type, msg, time });
+
+    const list = document.getElementById('logList');
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `
+      <div class="log-time">${time}</div>
+      <div class="log-dot ${type}"></div>
+      <div class="log-msg">${msg}</div>
+    `;
+    if (list.querySelector('.empty-log')) list.innerHTML = '';
+    list.insertBefore(item, list.firstChild);
+  }
+
+  function clearLog() {
+    logEntries = [];
+    const list = document.getElementById('logList');
+    list.innerHTML = '<div class="empty-log">No events recorded yet.</div>';
+  }
+
+  // Safe fluctuation for non-danger rooms
+  setInterval(() => {
+    roomData.forEach((r, i) => {
+      if (!r.danger) {
+        r.ppm = rand(SAFE_MIN, SAFE_MAX);
+        document.getElementById(`ppm-${i}`).textContent = r.ppm;
+        document.getElementById(`bar-${i}`).style.width = ppmToWidth(r.ppm) + '%';
+      }
+    });
+    updateStats();
+  }, 2500);
+
+  buildGrid();
+  updateStats();
+  addLog('info', 'System initialized — All 6 sensors online.');
+  addLog('safe', 'All rooms within safe PPM range. Monitoring active.');
+</script>
+</body>
+</html>
