@@ -1,0 +1,67 @@
+{
+  "smoke_alerts": {
+    "alert_001": {
+      "room": "Room 101",
+      "roomId": "R101",
+      "ppm": 287,
+      "status": "DANGER",
+      "timestamp": "2026-05-12T08:23:11.000Z",
+      "time": "8:23:11 AM",
+      "date": "5/12/2026"
+    },
+    "alert_002": {
+      "room": "Room 103",
+      "roomId": "R103",
+      "ppm": 312,
+      "status": "DANGER",
+      "timestamp": "2026-05-12T09:45:02.000Z",
+      "time": "9:45:02 AM",
+      "date": "5/12/2026"
+    }
+  },
+  "rooms": {
+    "R101": {
+      "name": "Room 101",
+      "ppm": 118,
+      "status": "NORMAL",
+      "lastUpdated": "2026-05-12T10:00:00.000Z"
+    },
+    "R102": {
+      "name": "Room 102",
+      "ppm": 122,
+      "status": "NORMAL",
+      "lastUpdated": "2026-05-12T10:00:00.000Z"
+    },
+    "R103": {
+      "name": "Room 103",
+      "ppm": 115,
+      "status": "NORMAL",
+      "lastUpdated": "2026-05-12T10:00:00.000Z"
+    },
+    "R104": {
+      "name": "Room 104",
+      "ppm": 125,
+      "status": "NORMAL",
+      "lastUpdated": "2026-05-12T10:00:00.000Z"
+    },
+    "R105": {
+      "name": "Room 105",
+      "ppm": 119,
+      "status": "NORMAL",
+      "lastUpdated": "2026-05-12T10:00:00.000Z"
+    },
+    "R106": {
+      "name": "Room 106",
+      "ppm": 121,
+      "status": "NORMAL",
+      "lastUpdated": "2026-05-12T10:00:00.000Z"
+    }
+  },
+  "system": {
+    "name": "SmokeSentinel",
+    "location": "ERMA Boarding House",
+    "totalSensors": 6,
+    "status": "ONLINE",
+    "lastBoot": "2026-05-12T07:00:00.000Z"
+  }
+}
