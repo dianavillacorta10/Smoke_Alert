@@ -1,0 +1,70 @@
+{
+  "rules": {
+
+    // ─── SMOKE ALERTS ───
+    // Anyone can read alerts (dashboard viewing)
+    // Only authenticated users or ESP32 can write new alerts
+    "smoke_alerts": {
+      ".read": true,
+      ".write": true,
+
+      "$alertId": {
+        ".validate": "newData.hasChildren(['room', 'roomId', 'ppm', 'status', 'timestamp', 'time', 'date'])",
+
+        "room":      { ".validate": "newData.isString() && newData.val().length > 0" },
+        "roomId":    { ".validate": "newData.isString()" },
+        "ppm":       { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5000" },
+        "status":    { ".validate": "newData.isString() && (newData.val() === 'DANGER' || newData.val() === 'NORMAL')" },
+        "timestamp": { ".validate": "newData.isString()" },
+        "time":      { ".validate": "newData.isString()" },
+        "date":      { ".validate": "newData.isString()" },
+
+        // Block any extra unknown fields
+        "$other":    { ".validate": false }
+      }
+    },
+
+    // ─── ROOMS ───
+    // Anyone can read room status (dashboard viewing)
+    // Only authenticated users or ESP32 can update room data
+    "rooms": {
+      ".read": true,
+      ".write": true,
+
+      "$roomId": {
+        ".validate": "newData.hasChildren(['name', 'ppm', 'status', 'lastUpdated'])",
+
+        "name":        { ".validate": "newData.isString()" },
+        "ppm":         { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5000" },
+        "status":      { ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'DANGER')" },
+        "lastUpdated": { ".validate": "newData.isString()" },
+
+        "$other": { ".validate": false }
+      }
+    },
+
+    // ─── SYSTEM INFO ───
+    // Anyone can read system info
+    // Only authenticated users can update system settings
+    "system": {
+      ".read": true,
+      ".write": true,
+
+      "name":         { ".validate": "newData.isString()" },
+      "location":     { ".validate": "newData.isString()" },
+      "totalSensors": { ".validate": "newData.isNumber()" },
+      "status":       { ".validate": "newData.isString() && (newData.val() === 'ONLINE' || newData.val() === 'OFFLINE')" },
+      "lastBoot":     { ".validate": "newData.isString()" },
+
+      "$other": { ".validate": false }
+    },
+
+    // ─── BLOCK EVERYTHING ELSE ───
+    // Any path not listed above is denied
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+
+  }
+}
